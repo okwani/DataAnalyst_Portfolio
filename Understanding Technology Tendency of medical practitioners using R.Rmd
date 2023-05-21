@@ -1,0 +1,536 @@
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# 1.0 Introduction and Background
+
+Technology continues to grow at an exponential rate and organisations are utilising it to enhance productivity, improve customer experience, and generate profits(Dewett and Jones, 2001). The healthcare industry is also integrating technology into its processes. However, Wu et al. (2011) discovered that medical practitioners are often concerned about the risks and uncertainties associated with adopting new medical technology. This is because hospitals directly relate to the health and well-being of their patients, and practitioners are responsible for their patients' lives. As a result, medical practitioners tend to adopt technology much later, when it has become more mature and widely accepted. Nevertheless, Chau and Hau (2002), contends that medical practitioners should view technology as a medium to support highly specialised tasks, which can help to reduce costs and restructure processes. In some cases, failure to adopt technology, especially for managing customer information exchange and improving customer experience, may lead to loss of customers (Kluge, 2007).
+
+As technology continues to integrate with the healthcare industry, it is crucial to recognize its impact on decision-making and policy creation. This underscores the importance of understanding healthcare workers' tendencies to adopt new technology. 
+
+Therefore, this paper aims to identify the pertinent factors that influence healthcare workers' tendency to adopt new technology across two (2) datasets, visualise the relationships between these factors but most importantly, employ statistical methodologies to develop machine models that capture these factors and accurately predict the adoption of the new technology. Ultimately, a comparative analysis of these predictive models will be conducted, and recommendations will be provided based on the findings.
+
+# 2.0 Methodology
+The analysis was done using R and the Cross Industry Standard Process for Data Mining (CRISP-DM) is used to guide the data mining tasks.
+
+```{r figure1, echo=FALSE, out.width = '100%'}
+knitr::include_graphics("/Users/Okwani/Documents/crisp.png")
+```
+
+The directory was set and all necessary packages and libraries required for the analysis were installed.
+
+```{r, echo=FALSE, include=FALSE}
+
+local({r <- getOption("repos")
+       r["CRAN"] <- "http://cran.r-project.org"
+       options(repos=r)})
+
+install.packages("psych")
+library(psych)
+install.packages("dplyr")
+library(dplyr)
+install.packages("ggplot2") #for data visualisation
+library(ggplot2)
+install.packages("tidyverse")
+library(tidyverse)
+library(lattice)     
+library(caret)
+library(e1071)
+library(boot)
+install.packages("naivebayes") #naive bayes classification
+library(naivebayes)
+install.packages("pROC") 
+library(pROC)
+install.packages("lmtest") 
+library(lmtest)
+install.packages("car") 
+library(car)
+install.packages("epiDisplay")
+library(epiDisplay)
+
+setwd("C:/Users/Okwani/Documents")
+
+```
+
+# 2.1 Data Available and Variables Selected
+
+The dataset given had focus on only one state - Los Angeles (LA) with a total of 14,543 observations across 15 variables. This dataset was split into 2 (two) based on the top 8 primary specialties of the healthcare workers i.e  four (4) each per dataset and this was following all data cleaning and processing.The data was also converted to a dataframe to allow for easy manipulation and analysis.
+
+```{r chunk1, echo=TRUE}
+#read in file 
+data <- read.csv(file.choose())
+
+#Convert data to dataframe(pandas) to allow for easy manipulation.
+datadf <- as.data.frame(data)
+
+#view the frequency of final primary specialities 
+datadf$primaryspec <-as.factor(datadf$final_primary_speciality)
+
+#print the frequency table and view distribution
+Freq_table<-tab1(datadf$primaryspec, 
+                 sort.group = "decreasing", cum.percent = TRUE)
+Freqdf<-as.data.frame(Freq_table$output.table)
+View(Freqdf)
+```
+
+
+# 2.2 Data Cleaning and Processing
+
+The machine learning community often emphasises the maxim "Better data beats fancier algorithms." This popular saying suggests that improving data quality is more likely to yield better outcomes than utilising more complex algorithms (Liyanapathirana, 2018).
+
+To give a clear view of the full dataset and allow the data quality issues to be identified and resolved, some descriptive summary and other measures was carried out.
+
+```{r chunk2, echo=TRUE, include=FALSE}
+summary(datadf)
+head(datadf)
+describe(datadf)
+```
+
+
+Variables X, X.1 and ID were removed as they are unique to each worker and have no significant impact on the results. All duplicate rows were removed and the dataset was filtered by final grad year, rank and global rank to remove the blanks and NAs and subsequently all remaining blanks and NAs were removed. In total, 45,590 blanks and NAs were removed.
+
+```{r chunk3, echo= TRUE, include=FALSE}
+#remove all duplicate rows in the dataset
+datadf <- datadf %>% distinct()
+
+#remove the first 3 columes (X, X.1 and ID)
+datadf2 <- datadf[-c(1,2,3)]
+
+#replace 0, blanks with NA and check sum of na
+datadf3 <- replace(datadf2, datadf2 == "", NA)
+datadf4 <- replace(datadf3, datadf3 =="0", NA)
+sum(is.na(datadf4))
+
+#Remove the na based on the categories instructed, check sum of na at intervals 
+datadf4 <- datadf4 %>% filter(!is.na(final_grad_year))
+sum(is.na(datadf4))
+datadf4 <- datadf4 %>% filter(!is.na(Rank))
+sum(is.na(datadf4))
+datadf4 <- datadf4 %>% filter(!is.na(Global.Rank))
+sum(is.na(datadf4))
+
+#remove the remaining NAs
+datadf4 <- drop_na(data= datadf4)
+sum(is.na(datadf4))
+```
+
+All accuracy less than 0.3 was also dropped so as to focus on variables with relatively significant accuracy. At different points, visualisations were carried out to show the relationship between the dependent variable (median_tech) and other variables and the results are discussed in the next section.
+
+```{r chunk50, echo=TRUE, include=FALSE}
+datadf5 <- datadf4 %>%  filter(accuracy > 0.3)
+
+```
+
+The dataset underwent preliminary visualization to evaluate its characteristics. The analysis revealed that the median of the median tech was approximately 2008.
+When analyzing the relationship between mean tech and rank, schools within rank 120 - 150 show a high tendency between 2005 and 2010. This trend is also evident when examining global rank against median tech, but in this case, mostly males fall within this range when viewed by gender. Lastly, comparing max tech to the final year of graduation indicates that individuals who graduated later have a higher tendency towards newer technology. 
+
+```{r chunk4, echo=FALSE}
+#initial visualisation of general data
+
+#histogram showing the median_tech frequency
+hist(datadf5$median_tech, col = 2, main = "frequency of median_tech")
+
+#view relationship between rank and mean tech
+plot(datadf5$Rank, datadf5$mean_tech, main = "Relationship between Rank and technology tendency"
+     , xlab= "Rank", ylab= "Mean tech tendency")
+
+#view relationship between rank and min tech then colour by gender.
+ggplot(datadf5, aes(x = Rank, y = min_tech, colour = as.factor(final_gender))) +
+  geom_point() +
+  ggtitle("Relationship between Rank and Min technology tendency coloured by Gender")
+
+#view relationship between final grad year and max tech
+qplot(x= final_grad_year, y= max_tech, data = datadf5)+
+  geom_point()+
+  ggtitle("Relationship between Final Grad Year and Max technology tendency")
+
+#view relationship between global rank and median tech
+ggplot(data= datadf5, aes(x = Global.Rank, y = median_tech, colour = as.factor(final_gender))) +
+  geom_point() +
+ggtitle("Relationship between Global rank and median technology tendency")
+
+```
+
+For the analysis, the median tech was chosen as the selected technology tendency because from existing literature median is usually preferred as it is not affected by outliers unlike the mean ((Bruce et al., 2020). The median of the median_tech was used to create a binary variable with 1 denoting a variable higher than the median and 0 denoting a variable lower than the median. 
+
+
+```{r chunk55, echo =TRUE}
+set.seed(40386014)
+median(datadf5$median_tech)
+
+tendency <- factor(ifelse(datadf5$median_tech <= 2008.209, "0", "1"))
+dataset <-data.frame(datadf5, tendency)
+
+view(dataset)
+```
+
+Character strings were converted to factor, correlation of all numeric variables were also carried out and a count was done to reveal the percentage and number of variable above the median tendency (1) at 2693(51.1%) and below the median tendency (0) at 2582(48.9%).		
+
+
+```{r chunk66, echo=TRUE}
+dataset[sapply(dataset, is.character)] <- lapply(dataset[sapply(dataset, is.character)], as.factor)
+
+sapply(dataset, class)
+
+cor(dataset[-c(1, 6,8,9,13,14)])
+
+dataset %>% group_by(tendency) %>% count()
+round(prop.table(table(dataset$tendency))*100,1)
+
+
+```
+
+Other technology tendencies were removed as well as global rank due to its high correlation with rank after which the predictive models analysis was started.
+
+```{r chunk7, echo=FALSE, include=FALSE}
+dataset <- dataset[-c(11)] #drop global rank as it is highly correlated with rank
+dataset <- dataset[-c(1)] #drop state since it is only LA
+dataset <- dataset[-c(1,2,3,4)] #drop mean, median, min and max
+```
+
+The cleaned dataset was then split as earlier noted into 2 datasets A and B with based on the top eight specialities as seen below.
+
+```{r figure3, echo=FALSE, out.width = '100%'}
+knitr::include_graphics("/Users/Okwani/Pictures/Screenshots/frequency of speciality.png")
+```
+```{r chunk8, echo=TRUE}
+Top_freq_spec_a<-c('FAMILY MEDICINE','INTERNAL MEDICINE', 'NURSE PRACTITIONER', 'OBSTETRICS/GYNECOLOGY')
+DatasetA <- dataset[dataset$primaryspec %in% Top_freq_spec_a,]
+
+
+Top_freq_spec_b<-c('EMERGENCY MEDICINE','CARDIOVASCULAR DISEASE (CARDIOLOGY)', 'ORTHOPEDIC SURGERY', 'OPHTHALMOLOGY')
+DatasetB <- dataset[dataset$primaryspec %in% Top_freq_spec_b,]
+```
+
+
+Finally, visualisation was done on the fully cleaned and filtered Dataset A and the results are seen and discussed in the results section below.
+
+# 2.3 Modelling
+To make predictions, three algorithms were employed for Dataset A: Logistic Regression, KNN, and Naives-Bayes, while KNN and Naives-Bayes was employed for Dataset B. 
+Logistic regression is a statistical technique that categorises records based on input attribute values. Unlike linear regression, it considers a categorical target field instead of a numeric one, making it a preferred method when the dependent variable has two values, which is why it was used in this analysis (Elsalamony, 2014).
+
+$$P(X)= \frac{e^{\beta_0 + \beta_1 X}}{1+e^{\beta_0 + \beta_1 X}}$$
+
+
+KNN, or k-nearest neighbours, is a non-parametric supervised learning classifier that uses proximity to classify or predict the grouping of an individual data point. The euclidean distance formula was used in this case. 
+
+```{r figure5, echo=FALSE, out.width = '100%'}
+knitr::include_graphics("/Users/Okwani/Documents/knn.png")
+```
+
+Naives-Bayes, on the other hand, is a classifier that employs the bayes theorem to make assumptions based on certain observed features. In studies, it has been found to outperform random forest and decision tree models in prediction and accuracy (Caruana and Niculescu-Mizil, 2006).
+
+```{r figure6, echo=FALSE, out.width = '50%'}
+knitr::include_graphics("/Users/Okwani/Documents/naive_bayes_icon.png")
+```
+
+The dataset was split into train and test sets with a set.seed to maintain the accuracy of the initial value drawn. The accuracy of the models was evaluated using the test data, and a 10-fold cross-validation was conducted to estimate the predictive models' skill on unseen data. In other words, a limited sample was used to estimate how well the model is expected to perform when making predictions on data that was not used during the model's training.
+
+```{r chunk11, echo=TRUE}
+set.seed(40386014)
+index <- createDataPartition(DatasetA$tendency, times=1, p= 0.8, list = FALSE)
+train <- DatasetA[index,]
+test <- DatasetA[-index,]
+```
+
+Finally, all models were compared, and the results from the two datasets, as well as insights gained from the analysis, were discussed in the report section. The conclusion discusses the implications, research limitations, and opportunities for further research.
+
+
+# 3.0 Results and Discussion (Dataset A)
+According to the visual analysis below, all participants were based in LA. From the total in datasetA,965(42.9%)	have lower technology tendency while 1283(57.1%) have a high technology tendency. It was observed that male healthcare workers had a higher median technology tendency than their female counterparts. 
+
+Notably, schools with a ranking between $120$ and $180$ exhibited the highest median technology tendency and when assessed by gender in this group, it is seen that males have a higher technology tendency than females. Among the healthcare workers in this dataset, those with a final primary specialty in Internal Medicine showed the highest rates of high median technology tendencies, particularly among female professionals in this field. Conversely, healthcare workers with a primary specialty in Obstetrics and Gynecology had the lowest rates of high median technology tendency.
+
+
+```{r chunk12, echo=TRUE}
+#check distribution of response variable
+DatasetA %>% group_by(tendency) %>% count()
+round(prop.table(table(DatasetA$tendency))*100,1)
+
+#visualisation showing relationship between gender and the dependent variable.
+DatasetA %>%
+  ggplot(aes(as.factor(final_gender), fill = tendency))+
+  geom_bar(stat = "count", position = "fill")+
+  scale_y_continuous(labels = scales::percent_format())
+
+#visualisation of primary speciality and dependent variable
+DatasetA %>%
+  ggplot(aes(final_primary_speciality, fill = tendency, title = ("Relationship between final primary speciality and tendency")))+
+  geom_bar(stat = "count", position = "fill")+
+  theme(axis.text.x = element_text(size = 7))+
+  scale_y_continuous(labels = scales::percent_format())
+
+#visualisation of primary speciality and dependent variable as viewed by gender
+ggplot(DatasetA, aes(x= final_primary_speciality, y=tendency, colour = final_gender))+
+  geom_jitter(width = .2)
+
+#second visualisation of primary speciality and dependent variable based on gender.
+ggplot(DatasetA, aes(x = final_primary_speciality, y = tendency, colour = final_gender)) + geom_point(size=10)
+
+#visualisation of Rank and dependent variable 
+DatasetA %>%
+  mutate(rank_groups = cut(Rank, breaks = seq(0, 300, 60), include.lowest = T)) %>% ggplot(aes(rank_groups, fill = tendency))+
+  geom_bar(stat = "count", position = "fill")+
+  scale_y_continuous(labels = scales::percent_format())+
+  labs(title = "Relationship between Rank and Technology Tendency",
+       y = "Percentage Count",
+       x = "Rank Group", fill = "Outcome")
+
+#visualisation showing the relationship between rank and tendency dependent on gender
+DatasetA %>%
+  mutate(rank_groups = cut(Rank, breaks = seq(0, 300, 60), include.lowest = T)) %>% ggplot(aes(rank_groups, tendency, colour = final_gender))+
+    geom_jitter(width = .2)
+
+#visualisation for relationship between final grad year and dependent variabale
+DatasetA %>%
+  ggplot(aes(final_grad_year, fill = tendency,title = ("Relationship between final grad year and tendency")))+
+  geom_boxplot()+
+  scale_x_log10()+
+  coord_flip()
+
+
+```
+
+# 3.1 Model 1: Model building and Assumption for Logistic Regression
+A logistic regression model was constructed to forecast technology tendency based on final gender, final primary specialty, Rank, and final grad year. Studies suggests that for LR, certain assumptions, such as the independence of errors, the lack of influential outliers, and the absence of multicollinearity, must be fulfilled (Stoltzfus, 2011). Logistic regression is used to predict the probability of a response variable Y belonging to a specific category.
+
+In this model, The glm() function is employed to fit the model, with the family being specified as `binomial`. The summary() function is utilized to retrieve the outcomes of the logistic regression model.
+
+```{r chunk14, echo=TRUE, include=FALSE}
+
+#logistic regression model
+
+logr <- glm(tendency ~ final_gender + final_primary_speciality + Rank + final_grad_year, data = train, family = "binomial") 
+summary(logr)
+coef(logr)
+summary(logr)$coef
+```
+
+The model is evaluated by making predictions on the test data previously set aside. A confusion matrix is then used to show the accuracy and kappa values of the model. The AUC-ROC and specificity is also examined and finally, the `postResample()` function is utilized to compute the performance over resamples.
+
+```{r chunk15, echo = TRUE}
+#make predictions on test set
+DatasetA$tendency = factor(DatasetA$tendency,levels=c("0","1"))
+pred_logr <- predict(logr, test, type = "response") 
+class_pred<- ifelse(pred_logr > .5, "1", "0") 
+class_pred = factor(class_pred,levels=c("0","1"))
+confusionMatrix(table(class_pred, test$tendency)) 
+postResample(class_pred, test$tendency)
+
+#Check AUC-ROC
+# create roc curve
+logr_roc <- roc( test$tendency, pred_logr)
+# calculate area under curve
+auc( logr_roc )
+
+```
+
+# 3.1.2 RESULTS
+
+According to the results, the Final grad year was significant at the 0.01 level, indicating that healthcare workers who graduated later tend to have a higher median technology tendency. Final primary specialty was also significant, with healthcare workers in Obstetrics/Gynecology having a significant relationship with the dependent variable at the 0.001 level. Conversely, healthcare workers in Internal Medicine had a positive relationship with the dependent variable and were significant at 0.01. model also showed that gender had no significance impact on tendency
+
+The model had a predictive accuracy of $59.69%$, while the Kappa result was relatively low at $0.1125$ compared to the standard average good result of $0.4$. The AUC-ROC was $0.599$, which is considered to be fairly reasonable.The confusion matrix shows that this 45 true negatives and 223 true positives.
+
+Regarding the assumptions, the absence of influential cases was supported, as evidenced by the Cook's distance being zero. Complete separation was passed since the accuracy was less than $100%$. However, the independence of errors was not met since the Durbin-Watson test resulted in a value below 1.5. Lastly, the absence of multi-collinearity was satisfied, with no VIF greater than 10.
+
+```{r chunk16, echo=TRUE, include=FALSE}
+#check if model fulfills assumptions of logistic regression
+train$cook <- cooks.distance(logr) #check absence of influential cases
+sum(train$cook > 1)
+
+dwtest(logr) #check independence of errors
+vif(logr) #check absence of multicolinearity
+```
+
+## 3.2 Model 2: Model building and cross-validation for KNN
+
+The final graduation year and final primary specialty were chosen for the model as they exhibited a correlation and relationship with the dependent variable in the logistic regression. Thereafter, predictions are made on the test data and finally, a confusion matrix is generated.
+
+
+```{r chunk17, echo=TRUE}
+#Add cross validation method using the 10-fold method
+ctrl <- trainControl(method = 'cv', number = 10)
+
+#model 2 knn
+knnmodel <- train(tendency ~ final_grad_year + final_primary_speciality ,data = train, method= "knn", trControl = ctrl)
+
+knnmodel
+
+pred_knn <- predict(knnmodel, newdata = test)
+
+# Evaluate the performance of the model on the testing data
+confusionMatrix(pred_knn, test$tendency)
+```
+
+
+## 3.2.1 Results
+Based on the outcomes, it can be concluded that the model performed well, with $62.81%$ of the observations being correctly predicted. The Cohen's Kappa value of $0.208$ suggests that there is a fair agreement between the dependent variable "tendency" and the independent variables. Moreover, the specificity result is also good, as it indicates that $80.08%$ of the negative values were correctly predicted as negatives. For this model, there were 77 true negatives and 205 true positives.
+
+## 3.3 MODEL 3: Model building and cross-validation for Naive-Bayes
+The naive_bayes() function is used to fit the model to the dataset using the default Gaussian distribution. Similar to the KNN, the final grad year, final primary specialty, and final gender are used to build the Naive Bayes model. Predictions are made on the test dataset, and accuracy is assessed by analyzing the confusion matrix results.
+
+
+```{r chunk18, warning=FALSE, echo=TRUE}
+#model 3 naive bayes
+nbmodel <- naive_bayes(tendency ~ final_grad_year + final_primary_speciality + final_gender, data = train, trControl = ctrl, preProcess = c("center", "scale"))
+
+# Evaluate the model using the test set
+pred_nb <- predict(nbmodel, test)
+
+confusionMatrix(pred_nb, test$tendency)
+
+print(nbmodel)
+```
+
+
+## 3.3.1 RESULTS
+According to the results, the predictions made by the Naive Bayes model were accurate $60.58%$ of the time. Although the Kappa value indicates a low agreement between the independent variables and the dependent variable, the sensitivity and specificity of the Naive Bayes model suggest good model performance. This model had 56 true negatives and 216 true positives from the correlation matrix results.
+
+## 3.4 COMPARISON OF THE THREE MODELS FOR DATASET A
+The analysis suggests that the KNN model outperformed the logistic regression and Naive Bayes models, with a predictive accuracy of $62.81%$. Additionally, the Kappa value for the KNN model was slightly greater than 0.2, indicating a fair agreement between the chosen independent variables and the target variable tendency, in contrast to the low agreement values produced by the other models. Based on these results, it can be concluded that the KNN model was the most effective among the three machine learning algorithms for Dataset A.
+
+## 4.0 Results and Discussion (Dataset B)
+
+In DatasetB, it can be observed that 354 people have a median technology tendency greater than the median (1) while 550 people have a median tendency less than the median (0). 
+
+```{r chunk19, echo=TRUE, include=FALSE}
+names(DatasetB)
+view(DatasetB)
+
+DatasetB %>% group_by(tendency) %>% count()
+round(prop.table(table(DatasetB$tendency))*100,1)
+```
+
+Some visualizations were carried out to assess DatasetB, and it was observed that healthcare workers in the cardiology field had a higher tendency towards technology compared to other specialties, while ophthalmology had the least tendency. Additionally, schools ranked between 240-300 had a higher technology tendency. Results from the graduation year did not show an established pattern. However, a higher maximum technology tendency was observed among those who graduated between 1960 and just before the 2000s, compared to those who graduated after the 2000s. This suggests that individuals who graduated earlier had a higher tendency towards technology.
+
+
+```{r chunk20, echo=TRUE}
+#visualisation on dataset 2
+DatasetB %>%
+  ggplot(aes(final_primary_speciality, fill = tendency))+
+  geom_bar(stat = "count", position = "fill")+
+  theme(axis.text.x = element_text(size = 7))+
+  scale_y_continuous(labels = scales::percent_format())
+
+
+DatasetB %>%
+  ggplot(aes(final_grad_year, fill = tendency))+
+  geom_bar(stat = "count", position = "fill")+
+  scale_y_continuous(labels = scales::percent_format())
+
+DatasetB %>%
+  mutate(rank_groups = cut(Rank, breaks = seq(0, 300, 60), include.lowest = T)) %>% ggplot(aes(rank_groups, fill = tendency))+
+  geom_bar(stat = "count", position = "fill")+
+  scale_y_continuous(labels = scales::percent_format())+
+  labs(title = "Relationship between Rank and Technology Tendency",
+       y = "Percentage Count",
+       x = "Rank Group", fill = "Outcome")
+```
+
+
+```{r chunk21, echo=TRUE}
+#--Building the models for dataset B-----
+set.seed(40386014)
+index <- createDataPartition(DatasetB$tendency, times=1, p= 0.8, list = FALSE)
+trainB <- DatasetB[index,]
+testB <- DatasetB[-index,]
+
+```
+
+## 4.1 MODELLING
+The performance of KNN and Naive Bayes models in dataset A were better than logistic regression, hence they were used to fit dataset B. Similar variables as Dataset A was used in KNN however for Naives-Bayes, Accuracy was added to the variables. the Predictive accuracy was then compared between the two models, and a final model was selected based on the results.
+
+```{r chunk22, echo=TRUE, include=FALSE}
+
+#model 1 knn
+knnmodelB <- train(tendency ~ final_primary_speciality + final_gender,data = trainB, method= "knn", trControl = ctrl)
+
+pred_knn2 <- predict(knnmodelB, newdata = testB)
+
+# Evaluate the performance of the model on the testing data
+confusionMatrix(pred_knn2, testB$tendency)
+
+
+```
+
+```{r chunk23, echo=TRUE, warning=FALSE, include=FALSE}
+nbmodelB <- naive_bayes(tendency ~ final_primary_speciality + final_gender+ accuracy, data = trainB, trControl = ctrl, preProcess = c("center", "scale"))
+
+# Evaluate the model using the test set
+pred_nbB <- predict(nbmodelB, testB)
+
+confusionMatrix(pred_nbB, testB$tendency)
+
+print(nbmodelB)
+```
+
+## 4.2 COMPARISON OF RESULTS
+Similar to the results obtained in model A, the KNN algorithm shows superior performance in terms of both predictive accuracy and Kappa scores in model B as well. The KNN model accurately predicts around $68.33%$ of the observations, while the Naive Bayes model has an accuracy of $67.22%$. However, the specificity values of both models are relatively low, indicating a lower percentage of accurate negative predictions.
+
+## 5.0 Visualisation and Analysis on Alternate dataset
+
+The dataset was also visualised including all the blank and NAs previously removed and also with data having above 0.8 accuracy. The results showed that the higher the school rank, the higher the tech tendency and in this case everyone (100%) within this range had a high tech tendency. It is also observed that people who at year 2000 have a high tendency toward technology.
+
+```{r chunk70, echo = TRUE}
+
+dataset1 <- datadf3 %>%  filter(accuracy > 0.8)
+set.seed(403)
+median(dataset1$median_tech)
+
+
+tendency1 <- factor(ifelse(dataset1$median_tech <= 2007.743, "0", "1"))
+dataset2 <-data.frame(dataset1, tendency1)
+
+dataset2 %>%
+  ggplot(aes(final_grad_year, fill = tendency1))+
+  geom_bar(stat = "count", position = "fill")+
+  scale_y_continuous(labels = scales::percent_format())
+
+dataset2 %>%
+  mutate(rank_groups = cut(Rank, breaks = seq(0, 300, 60), include.lowest = T)) %>% ggplot(aes(rank_groups, fill = tendency1))+
+  geom_bar(stat = "count", position = "fill")+
+  scale_y_continuous(labels = scales::percent_format())+
+  labs(title = "Relationship between Rank and Technology Tendency",
+       y = "Percentage Count",
+       x = "Rank Group", fill = "Outcome")
+
+
+```
+
+
+
+
+## 6.0 CONCLUSION AND RECOMMENDATIONS
+The objective of this study was to accurately forecast the technology tendency of healthcare professionals in Los Angeles, USA. The study involved the development of five distinct models, three for Dataset A and two for Dataset B, which predicted the median technology inclination of healthcare professionals based on their demographic characteristics. The KNN model demonstrated the best performance in both Dataset A and B. This research is a valuable contribution to the literature on the progress of technology in healthcare and the anticipation of healthcare workers' reactions to it. The findings of this study can benefit decision-makers and policymakers in the healthcare sector. However, it is important to note that this research is limited to basic demographic characteristics of healthcare workers. The exploration of other demographic factors, as well as the utilization of unstructured data, could lead to distinct outcomes.
+
+
+## 7.0 REFERENCES
+
+Bruce. P., Bruce, A., Peter Gedeck (2022) Practical Statistics for Data Scientists. O’Reilly Media, Inc, Michigan, United States of America
+
+Caruana, R. and Niculescu-Mizil, A. (2006) “An empirical comparison of supervised learning algorithms,” Proceedings of the 23rd international conference on Machine learning  - ICML '06 [Preprint]. Available at: https://doi.org/10.1145/1143844.1143865. 
+
+Chau, P.Y.K. and Hu, P.J. (2002) “Examining a model of information technology acceptance by individual professionals: An exploratory study,” Journal of Management Information Systems, 18(4), pp. 191–229. Available at: https://doi.org/10.1080/07421222.2002.11045699. 
+
+Dewett, T. and Jones, G.R. (2001) “The role of Information Technology in the organization: A review, model, and assessment,” Journal of Management, 27(3), pp. 313–346. Available at: https://doi.org/10.1177/014920630102700306. 
+
+Elsalamony, H.A. (2014) “Bank direct marketing analysis of data mining techniques,” International Journal of Computer Applications, 85(7), pp. 12–22. Available at: https://doi.org/10.5120/14852-3218.
+
+Kluge, E.-H.W. (2007) “Secure e-health: Managing risks to Patient Health Data,” International Journal of Medical Informatics, 76(5-6), pp. 402–406. Available at: https://doi.org/10.1016/j.ijmedinf.2006.09.003.
+
+Liyanapathirana, L. (2018) Machine learning workflow on diabetes data: Part 01, Medium. Towards Data Science. Available at: https://towardsdatascience.com/machine-learning-workflow-on-diabetes-data-part-01-573864fcc6b8 (Accessed: January 5, 2022).  
+
+Stoltzfus, J. (2011) Logistic Regression: A Brief Primer, 18(10), pp 1099- 1104. Available at: https://onlinelibrary.wiley.com/doi/full/10.1111/j.1553-2712.2011.01185.x
+
+Wu, I.-L., Li, J.-Y. and Fu, C.-Y. (2011) “The adoption of Mobile Healthcare by Hospital's Professionals: An Integrative Perspective,” Decision Support Systems, 51(3), pp. 587–596. Available at: https://doi.org/10.1016/j.dss.2011.03.003. 
+
+Some parts of the code in the data preprocessing section have been taken from:https://www.statology.org/drop_na-in-r/
+
+Some parts of the code in the methodology section have been taken from: https://rpubs.com/ChrisSchmidt/777478
+
+Some parts of the code of logistic regression have been taken from: https://appsilon.com/r-markdown-tips/#:~:text=To%20insert%20an%20image%2C%20you,looks%20smaller%20by%20default%20though.
+
+Some parts of the code used in knn model building have been taken from: https://rpubs.com/njvijay/16444
+
+Some parts of the code used in naive bayes model building have been taken from : https://uc-r.github.io/naive_bayes
