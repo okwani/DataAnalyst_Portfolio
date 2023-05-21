@@ -2,16 +2,6 @@
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
 ```
-
-# 1.0 Introduction and Background
-
-Technology continues to grow at an exponential rate and organisations are utilising it to enhance productivity, improve customer experience, and generate profits(Dewett and Jones, 2001). The healthcare industry is also integrating technology into its processes. However, Wu et al. (2011) discovered that medical practitioners are often concerned about the risks and uncertainties associated with adopting new medical technology. This is because hospitals directly relate to the health and well-being of their patients, and practitioners are responsible for their patients' lives. As a result, medical practitioners tend to adopt technology much later, when it has become more mature and widely accepted. Nevertheless, Chau and Hau (2002), contends that medical practitioners should view technology as a medium to support highly specialised tasks, which can help to reduce costs and restructure processes. In some cases, failure to adopt technology, especially for managing customer information exchange and improving customer experience, may lead to loss of customers (Kluge, 2007).
-
-As technology continues to integrate with the healthcare industry, it is crucial to recognize its impact on decision-making and policy creation. This underscores the importance of understanding healthcare workers' tendencies to adopt new technology. 
-
-Therefore, this paper aims to identify the pertinent factors that influence healthcare workers' tendency to adopt new technology across two (2) datasets, visualise the relationships between these factors but most importantly, employ statistical methodologies to develop machine models that capture these factors and accurately predict the adoption of the new technology. Ultimately, a comparative analysis of these predictive models will be conducted, and recommendations will be provided based on the findings.
-
-# 2.0 Methodology
 The analysis was done using R and the Cross Industry Standard Process for Data Mining (CRISP-DM) is used to guide the data mining tasks.
 
 ```{r figure1, echo=FALSE, out.width = '100%'}
@@ -53,7 +43,7 @@ setwd("C:/Users/Okwani/Documents")
 
 ```
 
-# 2.1 Data Available and Variables Selected
+## Data Available and Variables Selected
 
 The dataset given had focus on only one state - Los Angeles (LA) with a total of 14,543 observations across 15 variables. This dataset was split into 2 (two) based on the top 8 primary specialties of the healthcare workers i.e  four (4) each per dataset and this was following all data cleaning and processing.The data was also converted to a dataframe to allow for easy manipulation and analysis.
 
@@ -75,7 +65,7 @@ View(Freqdf)
 ```
 
 
-# 2.2 Data Cleaning and Processing
+# Data Cleaning and Processing
 
 The machine learning community often emphasises the maxim "Better data beats fancier algorithms." This popular saying suggests that improving data quality is more likely to yield better outcomes than utilising more complex algorithms (Liyanapathirana, 2018).
 
@@ -206,7 +196,7 @@ DatasetB <- dataset[dataset$primaryspec %in% Top_freq_spec_b,]
 
 Finally, visualisation was done on the fully cleaned and filtered Dataset A and the results are seen and discussed in the results section below.
 
-# 2.3 Modelling
+# Modelling
 To make predictions, three algorithms were employed for Dataset A: Logistic Regression, KNN, and Naives-Bayes, while KNN and Naives-Bayes was employed for Dataset B. 
 Logistic regression is a statistical technique that categorises records based on input attribute values. Unlike linear regression, it considers a categorical target field instead of a numeric one, making it a preferred method when the dependent variable has two values, which is why it was used in this analysis (Elsalamony, 2014).
 
@@ -237,7 +227,7 @@ test <- DatasetA[-index,]
 Finally, all models were compared, and the results from the two datasets, as well as insights gained from the analysis, were discussed in the report section. The conclusion discusses the implications, research limitations, and opportunities for further research.
 
 
-# 3.0 Results and Discussion (Dataset A)
+# Results and Discussion (Dataset A)
 According to the visual analysis below, all participants were based in LA. From the total in datasetA,965(42.9%)	have lower technology tendency while 1283(57.1%) have a high technology tendency. It was observed that male healthcare workers had a higher median technology tendency than their female counterparts. 
 
 Notably, schools with a ranking between $120$ and $180$ exhibited the highest median technology tendency and when assessed by gender in this group, it is seen that males have a higher technology tendency than females. Among the healthcare workers in this dataset, those with a final primary specialty in Internal Medicine showed the highest rates of high median technology tendencies, particularly among female professionals in this field. Conversely, healthcare workers with a primary specialty in Obstetrics and Gynecology had the lowest rates of high median technology tendency.
@@ -292,7 +282,7 @@ DatasetA %>%
 
 ```
 
-# 3.1 Model 1: Model building and Assumption for Logistic Regression
+# Model 1: Model building and Assumption for Logistic Regression
 A logistic regression model was constructed to forecast technology tendency based on final gender, final primary specialty, Rank, and final grad year. Studies suggests that for LR, certain assumptions, such as the independence of errors, the lack of influential outliers, and the absence of multicollinearity, must be fulfilled (Stoltzfus, 2011). Logistic regression is used to predict the probability of a response variable Y belonging to a specific category.
 
 In this model, The glm() function is employed to fit the model, with the family being specified as `binomial`. The summary() function is utilized to retrieve the outcomes of the logistic regression model.
@@ -326,7 +316,7 @@ auc( logr_roc )
 
 ```
 
-# 3.1.2 RESULTS
+# RESULTS
 
 According to the results, the Final grad year was significant at the 0.01 level, indicating that healthcare workers who graduated later tend to have a higher median technology tendency. Final primary specialty was also significant, with healthcare workers in Obstetrics/Gynecology having a significant relationship with the dependent variable at the 0.001 level. Conversely, healthcare workers in Internal Medicine had a positive relationship with the dependent variable and were significant at 0.01. model also showed that gender had no significance impact on tendency
 
@@ -343,7 +333,7 @@ dwtest(logr) #check independence of errors
 vif(logr) #check absence of multicolinearity
 ```
 
-## 3.2 Model 2: Model building and cross-validation for KNN
+# Model 2: Model building and cross-validation for KNN
 
 The final graduation year and final primary specialty were chosen for the model as they exhibited a correlation and relationship with the dependent variable in the logistic regression. Thereafter, predictions are made on the test data and finally, a confusion matrix is generated.
 
@@ -364,10 +354,10 @@ confusionMatrix(pred_knn, test$tendency)
 ```
 
 
-## 3.2.1 Results
+# Results
 Based on the outcomes, it can be concluded that the model performed well, with $62.81%$ of the observations being correctly predicted. The Cohen's Kappa value of $0.208$ suggests that there is a fair agreement between the dependent variable "tendency" and the independent variables. Moreover, the specificity result is also good, as it indicates that $80.08%$ of the negative values were correctly predicted as negatives. For this model, there were 77 true negatives and 205 true positives.
 
-## 3.3 MODEL 3: Model building and cross-validation for Naive-Bayes
+## Model building and cross-validation for Naive-Bayes
 The naive_bayes() function is used to fit the model to the dataset using the default Gaussian distribution. Similar to the KNN, the final grad year, final primary specialty, and final gender are used to build the Naive Bayes model. Predictions are made on the test dataset, and accuracy is assessed by analyzing the confusion matrix results.
 
 
@@ -384,13 +374,13 @@ print(nbmodel)
 ```
 
 
-## 3.3.1 RESULTS
+#  RESULTS
 According to the results, the predictions made by the Naive Bayes model were accurate $60.58%$ of the time. Although the Kappa value indicates a low agreement between the independent variables and the dependent variable, the sensitivity and specificity of the Naive Bayes model suggest good model performance. This model had 56 true negatives and 216 true positives from the correlation matrix results.
 
-## 3.4 COMPARISON OF THE THREE MODELS FOR DATASET A
+# COMPARISON OF THE THREE MODELS FOR DATASET A
 The analysis suggests that the KNN model outperformed the logistic regression and Naive Bayes models, with a predictive accuracy of $62.81%$. Additionally, the Kappa value for the KNN model was slightly greater than 0.2, indicating a fair agreement between the chosen independent variables and the target variable tendency, in contrast to the low agreement values produced by the other models. Based on these results, it can be concluded that the KNN model was the most effective among the three machine learning algorithms for Dataset A.
 
-## 4.0 Results and Discussion (Dataset B)
+# Results and Discussion (Dataset B)
 
 In DatasetB, it can be observed that 354 people have a median technology tendency greater than the median (1) while 550 people have a median tendency less than the median (0). 
 
@@ -438,7 +428,7 @@ testB <- DatasetB[-index,]
 
 ```
 
-## 4.1 MODELLING
+# MODELLING
 The performance of KNN and Naive Bayes models in dataset A were better than logistic regression, hence they were used to fit dataset B. Similar variables as Dataset A was used in KNN however for Naives-Bayes, Accuracy was added to the variables. the Predictive accuracy was then compared between the two models, and a final model was selected based on the results.
 
 ```{r chunk22, echo=TRUE, include=FALSE}
@@ -465,10 +455,10 @@ confusionMatrix(pred_nbB, testB$tendency)
 print(nbmodelB)
 ```
 
-## 4.2 COMPARISON OF RESULTS
+# COMPARISON OF RESULTS
 Similar to the results obtained in model A, the KNN algorithm shows superior performance in terms of both predictive accuracy and Kappa scores in model B as well. The KNN model accurately predicts around $68.33%$ of the observations, while the Naive Bayes model has an accuracy of $67.22%$. However, the specificity values of both models are relatively low, indicating a lower percentage of accurate negative predictions.
 
-## 5.0 Visualisation and Analysis on Alternate dataset
+#  Visualisation and Analysis on Alternate dataset
 
 The dataset was also visualised including all the blank and NAs previously removed and also with data having above 0.8 accuracy. The results showed that the higher the school rank, the higher the tech tendency and in this case everyone (100%) within this range had a high tech tendency. It is also observed that people who at year 2000 have a high tendency toward technology.
 
@@ -500,9 +490,8 @@ dataset2 %>%
 
 
 
-
-## 6.0 CONCLUSION AND RECOMMENDATIONS
-The objective of this study was to accurately forecast the technology tendency of healthcare professionals in Los Angeles, USA. The study involved the development of five distinct models, three for Dataset A and two for Dataset B, which predicted the median technology inclination of healthcare professionals based on their demographic characteristics. The KNN model demonstrated the best performance in both Dataset A and B. This research is a valuable contribution to the literature on the progress of technology in healthcare and the anticipation of healthcare workers' reactions to it. The findings of this study can benefit decision-makers and policymakers in the healthcare sector. However, it is important to note that this research is limited to basic demographic characteristics of healthcare workers. The exploration of other demographic factors, as well as the utilization of unstructured data, could lead to distinct outcomes.
+# CONCLUSION AND RECOMMENDATIONS
+The objective of this project was to accurately forecast the technology tendency of healthcare professionals in Los Angeles, USA. The study involved the development of five distinct models, three for Dataset A and two for Dataset B, which predicted the median technology inclination of healthcare professionals based on their demographic characteristics. The KNN model demonstrated the best performance in both Dataset A and B. This research is a valuable contribution to the literature on the progress of technology in healthcare and the anticipation of healthcare workers' reactions to it. The findings of this study can benefit decision-makers and policymakers in the healthcare sector. However, it is important to note that this research is limited to basic demographic characteristics of healthcare workers. The exploration of other demographic factors, as well as the utilization of unstructured data, could lead to distinct outcomes.
 
 
 ## 7.0 REFERENCES
