@@ -41,3 +41,30 @@ resdata_kmeans$tot.withinss #shows total within cluster variation
 
 # Export data to a CSV file
 write.csv(segmentation_result, "/Users/Okwani/segmentation_result.csv",row.names = FALSE)
+
+
+## Discriminant Analysis Phase 
+
+# Install Packages and set seed 
+install.packages("MASS")
+
+library(MASS)
+
+set.seed(40386014)
+
+data <- read.csv(file.choose()) # read in segmentation result data
+
+
+## Run Discriminant Analysis
+fit <- lda(segment ~ Health + Finc + Sales + Advt + Edu + Cons + Eng + Tech + Retail + SMB + FB_Insta + Twit + Snap + YouTube + Pod_radio + TV + NewsP + Age + Gender + Income + Education, data = data)
+
+fit
+
+## Check which Discriminant Functions are Significant
+ldaPred <- predict(fit, data)
+
+ld <- ldaPred$x
+
+anova(lm(ld[,1] ~ data$segment))
+
+anova(lm(ld[,2] ~ data$segment))
